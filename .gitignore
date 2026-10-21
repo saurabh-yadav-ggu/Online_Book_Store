@@ -29,8 +29,12 @@ Thumbs.db
 
 # Environment variables
 .env
+.env.local
 
 # Static files collection
 staticfiles/
+
+# Vercel
+.vercel/
 
 

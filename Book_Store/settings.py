@@ -41,19 +41,36 @@ if _env_file.is_file():
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-if#g^u_mx@%dfu*ta3&k5!*ydab5#)()z&olv$d&xv@!%b=%#t'
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or os.getenv("SECRET_KEY", "django-insecure-if#g^u_mx@%dfu*ta3&k5!*ydab5#)()z&olv$d&xv@!%b=%#t")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Automatically defaults to False on Vercel unless explicitly set to True
+_is_vercel = bool(os.getenv("VERCEL"))
+DEBUG = os.getenv("DEBUG", str(not _is_vercel)).lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    ".vercel.app",
+    ".now.sh",
+    "127.0.0.1",
+    "localhost",
+    "*",
+]
+_env_allowed_hosts = os.getenv("ALLOWED_HOSTS")
+if _env_allowed_hosts:
+    ALLOWED_HOSTS = [h.strip() for h in _env_allowed_hosts.split(",") if h.strip()]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://*.vercel.app',
-    'https://online-book-store-flax-five.vercel.app',
-    'http://127.0.0.1:8000',
-    'http://localhost:8000',
+    "https://*.vercel.app",
+    "https://online-book-store-flax-five.vercel.app",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
 ]
+_env_csrf = os.getenv("CSRF_TRUSTED_ORIGINS")
+if _env_csrf:
+    for origin in _env_csrf.split(","):
+        origin = origin.strip()
+        if origin and origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
 
 
 
@@ -126,8 +143,10 @@ _db_url = os.getenv("DATABASE_URL") or _DEFAULT_SUPABASE_URL
 
 if _db_url:
     import dj_database_url
+    # In serverless environments (Vercel), connection persistence is set to 0 to avoid stale pooled connections
+    _conn_max_age = 0 if os.getenv("VERCEL") else 600
     DATABASES = {
-        'default': dj_database_url.parse(_db_url, conn_max_age=600, ssl_require=True)
+        'default': dj_database_url.parse(_db_url, conn_max_age=_conn_max_age, ssl_require=True)
     }
 else:
     DATABASES = {
